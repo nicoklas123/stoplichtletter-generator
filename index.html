@@ -73,17 +73,18 @@
             color: #475569;
         }
 
-        input[type="text"], textarea {
+        input[type="text"], textarea, select {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 1rem;
             font-family: inherit;
+            background-color: #fff;
             transition: border-color 0.2s;
         }
 
-        input[type="text"]:focus, textarea:focus {
+        input[type="text"]:focus, textarea:focus, select:focus {
             outline: none;
             border-color: var(--primary);
         }
@@ -238,8 +239,14 @@
             display: flex;
             flex-wrap: wrap;
             align-items: flex-end;
-            gap: 6px;
+            gap: 12px;
             min-height: 40px;
+        }
+
+        .word-group {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 6px;
         }
 
         .char-box {
@@ -324,7 +331,16 @@
                 <label for="sizeRange">Grootte van de letters</label>
                 <span id="sizeValue" style="font-weight:600; font-size:0.875rem;">95 px</span>
             </div>
-            <input type="range" id="sizeRange" min="45" max="170" value="95" step="5">
+            <input type="range" id="sizeRange" min="45" max="950" value="95" step="5">
+        </div>
+
+        <div class="control-group">
+            <label for="alignSelect">Uitlijning</label>
+            <select id="alignSelect">
+                <option value="flex-start">Links</option>
+                <option value="center">Midden</option>
+                <option value="flex-end">Rechts</option>
+            </select>
         </div>
 
         <label class="checkbox-group">
@@ -731,6 +747,7 @@
         const textInput = document.getElementById('textInput');
         const sizeRange = document.getElementById('sizeRange');
         const sizeValue = document.getElementById('sizeValue');
+        const alignSelect = document.getElementById('alignSelect');
         const showName = document.getElementById('showName');
         const showDots = document.getElementById('showDots');
 
@@ -771,7 +788,7 @@
             sizeValue.textContent = `${size} px`;
             worksheetContent.style.setProperty('--char-height', `${size}px`);
 
-            // Tekst omzetten naar regels en stoplichttekens
+            const alignment = alignSelect.value;
             const lines = textInput.value.split('\n');
             const includeDots = showDots.checked;
             worksheetContent.innerHTML = '';
@@ -779,22 +796,34 @@
             lines.forEach(line => {
                 const lineDiv = document.createElement('div');
                 lineDiv.className = 'word-line';
+                lineDiv.style.justifyContent = alignment;
 
-                for (const char of line) {
-                    if (char === ' ') {
-                        const space = document.createElement('div');
-                        space.className = 'space-box';
-                        lineDiv.appendChild(space);
-                    } else {
+                const words = line.split(/\s+/);
+                words.forEach((word, wIdx) => {
+                    if (word === '') return;
+
+                    const wordGroup = document.createElement('div');
+                    wordGroup.className = 'word-group';
+
+                    for (const char of word) {
                         const svgMarkup = createCharSVG(char, includeDots);
                         if (svgMarkup) {
                             const box = document.createElement('div');
                             box.className = 'char-box';
                             box.innerHTML = svgMarkup;
-                            lineDiv.appendChild(box);
+                            wordGroup.appendChild(box);
                         }
                     }
-                }
+                    lineDiv.appendChild(wordGroup);
+
+                    // Spatie toevoegen tussen woorden
+                    if (wIdx < words.length - 1) {
+                        const space = document.createElement('div');
+                        space.className = 'space-box';
+                        lineDiv.appendChild(space);
+                    }
+                });
+
                 worksheetContent.appendChild(lineDiv);
             });
         }
@@ -803,6 +832,7 @@
         titleInput.addEventListener('input', renderWorksheet);
         textInput.addEventListener('input', renderWorksheet);
         sizeRange.addEventListener('input', renderWorksheet);
+        alignSelect.addEventListener('change', renderWorksheet);
         showName.addEventListener('change', renderWorksheet);
         showDots.addEventListener('change', renderWorksheet);
 
