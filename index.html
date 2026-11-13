@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Werkblad Generator - Stoplichtletters & -cijfers</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-app: #f1f5f9;
+            --border: #cbd5e1;
+            --text: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Zijbalk (Bedieningspaneel) */
+        .sidebar {
+            width: 340px;
+            background: #ffffff;
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .sidebar h1 {
+            font-size: 1.25rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .traffic-dots-logo {
+            display: inline-flex;
+            gap: 4px;
+        }
+        .traffic-dots-logo span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            line-height: 1.5;
+        }
+
+        .range-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .legend {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.82rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .dot.green { background: #00a651; }
+        .dot.orange { background: #f39200; }
+        .dot.red { background: #ed1c24; }
+
+        .btn-print {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-print:hover {
+            background: var(--primary-hover);
+        }
+
+        .attribution {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Werkblad Voorbeeld (Rechterzijde) */
+        .preview-area {
+            margin-left: 340px;
+            flex: 1;
+            padding: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* A4 Pagina */
+        .a4-sheet {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            padding: 18mm 18mm;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sheet-header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 20px;
+        }
+
+        .sheet-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .name-field {
+            font-size: 1rem;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+        .name-line {
+            display: inline-block;
+            width: 160px;
+            border-bottom: 1.5px dotted #64748b;
+            margin-left: 6px;
+        }
+
+        .worksheet-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .word-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 6px;
+            min-height: 40px;
+        }
+
+        .char-box {
+            display: inline-flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: var(--char-height, 95px);
+        }
+
+        .char-box svg {
+            height: 100%;
+            width: auto;
+            overflow: visible;
+        }
+
+        .space-box {
+            width: calc(var(--char-height, 95px) * 0.45);
+            height: var(--char-height, 95px);
+        }
+
+        .sheet-footer {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Print opmaak */
+        @media print {
+            body {
+                background: white;
+            }
+            .sidebar {
+                display: none !important;
+            }
+            .preview-area {
+                margin-left: 0;
+                padding: 0;
+            }
+            .a4-sheet {
+                box-shadow: none;
+                width: 100%;
+                min-height: auto;
+                padding: 10mm;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h1>
+            <span class="traffic-dots-logo">
+                <span style="background:#00a651"></span>
+                <span style="background:#f39200"></span>
+                <span style="background:#ed1c24"></span>
+            </span>
+            Stoplicht-Werkblad
+        </h1>
+
+        <div class="control-group">
+            <label for="titleInput">Titel van het werkblad</label>
+            <input type="text" id="titleInput" value="Oefenen met schrijven" placeholder="Bijv. Kern 1 - woorden">
+        </div>
+
+        <div class="control-group">
+            <label for="textInput">Typ je tekst of cijfers</label>
+            <textarea id="textInput" placeholder="Typ hier woorden, zinnen of cijfers...">ik vis aap
+1 2 3 4 5
+6 7 8 9 0</textarea>
+        </div>
+
+        <div class="control-group">
+            <div class="range-header">
+                <label for="sizeRange">Grootte van de letters</label>
+                <span id="sizeValue" style="font-weight:600; font-size:0.875rem;">95 px</span>
+            </div>
+            <input type="range" id="sizeRange" min="45" max="170" value="95" step="5">
+        </div>
+
+        <label class="checkbox-group">
+            <input type="checkbox" id="showName" checked>
+            <span>Naamveld tonen bovenaan</span>
+        </label>
+
+        <label class="checkbox-group">
+            <input type="checkbox" id="showDots" checked>
+            <span>Stoplichtstippen tonen</span>
+        </label>
+
+        <div class="legend">
+            <strong>Schrijfrichting:</strong>
+            <div class="legend-item"><span class="dot green"></span> Groen = Startpunt</div>
+            <div class="legend-item"><span class="dot orange"></span> Oranje = Richting veranderen</div>
+            <div class="legend-item"><span class="dot red"></span> Rood = Stoppunt</div>
+        </div>
+
+        <button class="btn-print" onclick="window.print()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+            </svg>
+            Werkblad afdrukken / PDF
+        </button>
+
+        <div class="attribution">
+            &copy; CC BY-NC-SA 4.0 NicoKlas<br>
+            Stoplichtletters naar ontwerp van <strong>Juf Yvon</strong> (jufyvon.blogspot.com)
+        </div>
+    </aside>
+
+    <main class="preview-area">
+        <div class="a4-sheet" id="a4Sheet">
+            <div class="sheet-header" id="sheetHeader">
+                <div class="sheet-title" id="displayTitle">Oefenen met schrijven</div>
+                <div class="name-field" id="displayNameField">Naam:<span class="name-line"></span></div>
+            </div>
+
+            <div class="worksheet-content" id="worksheetContent"></div>
+
+            <div class="sheet-footer">
+                <span>🟢 Start &nbsp;&nbsp; 🟠 Bocht / richting &nbsp;&nbsp; 🔴 Stop</span>
+                <span>&copy; CC BY-NC-SA 4.0 NicoKlas | Stoplichtletters: Juf Yvon</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const GREEN = '#00a651';
+        const ORANGE = '#f39200';
+        const RED = '#ed1c24';
+
+        // Alle SVG-definities (viewBox hoogte = 140, basislijn op y = 110, x-hoogte van 50 tot 110)
+        const GLYPHS = {
+            // --- CIJFERS 0-9 ---
+            '0': {
+                w: 76,
+                paths: `<path d="M 38 14 C 62 14, 70 36, 70 62 C 70 88, 62 110, 38 110 C 14 110, 6 88, 6 62 C 6 36, 14 14, 38 14 Z M 38 28 C 24 28, 20 44, 20 62 C 20 80, 24 96, 38 96 C 52 96, 56 80, 56 62 C 56 44, 52 28, 38 28 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 41, cy: 21, c: RED },
+                    { cx: 35, cy: 21, c: GREEN }
+                ]
+            },
+            '1': {
+                w: 62,
+                paths: `<path d="M 10 42 L 34 14 L 48 14 L 48 110 L 33 110 L 33 34 L 19 51 Z"/>`,
+                dots: [
+                    { cx: 17, cy: 43, c: GREEN },
+                    { cx: 40.5, cy: 23, c: ORANGE },
+                    { cx: 40.5, cy: 102, c: RED }
+                ]
+            },
+            '2': {
+                w: 74,
+                paths: `<path d="M 10 38 C 12 20, 25 14, 40 14 C 58 14, 68 25, 68 41 C 68 56, 57 67, 32 95 L 68 95 L 68 110 L 9 110 L 9 98 C 40 64, 53 53, 53 41 C 53 32, 47 27, 38 27 C 29 27, 24 32, 23 41 Z"/>`,
+                dots: [
+                    { cx: 16, cy: 36, c: GREEN },
+                    { cx: 17, cy: 102, c: ORANGE },
+                    { cx: 61, cy: 102, c: RED }
+                ]
+            },
+            '3': {
+                w: 72,
+                paths: `<path d="M 11 33 C 14 20, 25 14, 39 14 C 56 14, 66 24, 66 38 C 66 49, 59 56, 49 60 C 61 63, 68 72, 68 84 C 68 100, 55 110, 37 110 C 22 110, 11 103, 8 91 L 22 87 C 24 94, 29 97, 37 97 C 47 97, 53 92, 53 83 C 53 73, 46 67, 33 67 L 26 67 L 26 54 L 33 54 C 44 54, 51 49, 51 39 C 51 31, 46 27, 38 27 C 30 27, 25 31, 23 37 Z"/>`,
+                dots: [
+                    { cx: 17, cy: 33, c: GREEN },
+                    { cx: 31, cy: 60.5, c: ORANGE },
+                    { cx: 15, cy: 91, c: RED }
+                ]
+            },
+            '4': {
+                w: 76,
+                paths: `<path d="M 14 14 L 29 14 L 29 73 L 46 73 L 46 38 L 60 38 L 60 73 L 70 73 L 70 87 L 60 87 L 60 110 L 46 110 L 46 87 L 14 87 Z"/>`,
+                dots: [
+                    { cx: 21.5, cy: 22, c: GREEN },
+                    { cx: 21.5, cy: 80, c: ORANGE },
+                    { cx: 64, cy: 80, c: RED },
+                    { cx: 53, cy: 46, c: GREEN },
+                    { cx: 53, cy: 102, c: RED }
+                ]
+            },
+            '5': {
+                w: 72,
+                paths: `<path d="M 14 14 L 63 14 L 63 28 L 28 28 L 27 50 C 31 48, 36 47, 41 47 C 58 47, 68 59, 68 78 C 68 98, 55 110, 36 110 C 21 110, 11 102, 8 90 L 22 86 C 24 93, 29 97, 36 97 C 46 97, 53 90, 53 78 C 53 66, 46 60, 36 60 C 30 60, 25 62, 22 66 L 11 63 Z"/>`,
+                dots: [
+                    { cx: 20, cy: 21, c: GREEN },
+                    { cx: 25, cy: 21, c: GREEN },
+                    { cx: 56, cy: 21, c: RED },
+                    { cx: 19, cy: 59, c: ORANGE },
+                    { cx: 15, cy: 90, c: RED }
+                ]
+            },
+            '6': {
+                w: 74,
+                paths: `<path d="M 62 32 L 48 35 C 46 29, 42 26, 37 26 C 25 26, 20 39, 19 57 C 24 51, 31 48, 40 48 C 57 48, 68 60, 68 78 C 68 97, 55 110, 38 110 C 17 110, 6 94, 6 65 C 6 31, 19 14, 38 14 C 51 14, 59 21, 62 32 Z M 38 61 C 28 61, 21 68, 21 78 C 21 89, 28 97, 38 97 C 47 97, 53 89, 53 78 C 53 68, 47 61, 38 61 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 54, cy: 31, c: GREEN },
+                    { cx: 13, cy: 66, c: ORANGE },
+                    { cx: 16, cy: 66, c: RED },
+                    { cx: 60, cy: 78, c: ORANGE }
+                ]
+            },
+            '7': {
+                w: 72,
+                paths: `<path d="M 8 14 L 66 14 L 66 26 L 47 56 L 63 56 L 63 69 L 41 69 L 27 110 L 11 110 L 25 69 L 13 69 L 13 56 L 30 56 L 48 28 L 8 28 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 21, c: GREEN },
+                    { cx: 57, cy: 21, c: ORANGE },
+                    { cx: 20, cy: 102, c: RED },
+                    { cx: 19, cy: 62.5, c: GREEN },
+                    { cx: 56, cy: 62.5, c: RED }
+                ]
+            },
+            '8': {
+                w: 74,
+                paths: `<path d="M 37 14 C 53 14, 63 23, 63 36 C 63 46, 57 53, 49 58 C 60 63, 67 71, 67 84 C 67 100, 54 110, 37 110 C 20 110, 7 100, 7 84 C 7 71, 14 63, 25 58 C 17 53, 11 46, 11 36 C 11 23, 21 14, 37 14 Z M 37 26 C 29 26, 25 31, 25 38 C 25 45, 30 50, 37 52 C 44 50, 49 45, 49 38 C 49 31, 45 26, 37 26 Z M 37 64 C 28 67, 22 73, 22 82 C 22 91, 28 97, 37 97 C 46 97, 52 91, 52 82 C 52 73, 46 67, 37 64 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 37, cy: 20, c: ORANGE },
+                    { cx: 37, cy: 103, c: ORANGE },
+                    { cx: 40, cy: 58, c: RED },
+                    { cx: 34, cy: 58, c: GREEN }
+                ]
+            },
+            '9': {
+                w: 74,
+                paths: `<path d="M 12 92 L 26 89 C 28 95, 32 98, 37 98 C 49 98, 54 85, 55 67 C 50 73, 43 76, 34 76 C 17 76, 6 64, 6 46 C 6 27, 19 14, 36 14 C 57 14, 68 30, 68 59 C 68 93, 55 110, 36 110 C 23 110, 15 103, 12 92 Z M 36 27 C 27 27, 21 35, 21 46 C 21 56, 27 63, 36 63 C 46 63, 53 56, 53 46 C 53 35, 46 27, 36 27 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 59, cy: 36, c: ORANGE },
+                    { cx: 58, cy: 32, c: GREEN },
+                    { cx: 19, cy: 94, c: RED }
+                ]
+            },
+
+            // --- KLEINE LETTERS a-z ---
+            'a': {
+                w: 72,
+                paths: `<path d="M 52 50 L 66 50 L 66 110 L 52 110 L 52 101 C 46 107, 39 111, 31 111 C 15 111, 6 98, 6 80 C 6 62, 15 49, 31 49 C 39 49, 46 53, 52 59 Z M 35 62 C 25 62, 20 69, 20 80 C 20 91, 25 98, 35 98 C 45 98, 52 91, 52 80 C 52 69, 45 62, 35 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 47, cy: 64, c: GREEN },
+                    { cx: 59, cy: 57, c: ORANGE },
+                    { cx: 59, cy: 103, c: RED }
+                ]
+            },
+            'b': {
+                w: 72,
+                paths: `<path d="M 8 14 L 22 14 L 22 59 C 28 53, 35 49, 43 49 C 59 49, 68 62, 68 80 C 68 98, 59 111, 43 111 C 35 111, 28 107, 22 101 L 22 110 L 8 110 Z M 39 62 C 29 62, 22 69, 22 80 C 22 91, 29 98, 39 98 C 49 98, 54 91, 54 80 C 54 69, 49 62, 39 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 15, cy: 22, c: GREEN },
+                    { cx: 15, cy: 103, c: ORANGE },
+                    { cx: 26, cy: 96, c: RED }
+                ]
+            },
+            'c': {
+                w: 62,
+                paths: `<path d="M 56 67 L 43 71 C 41 65, 37 62, 32 62 C 23 62, 19 69, 19 80 C 19 91, 23 98, 32 98 C 37 98, 41 95, 43 89 L 56 93 C 53 105, 44 111, 32 111 C 15 111, 5 98, 5 80 C 5 62, 15 49, 32 49 C 44 49, 53 55, 56 67 Z"/>`,
+                dots: [
+                    { cx: 48, cy: 65, c: GREEN },
+                    { cx: 48, cy: 95, c: RED }
+                ]
+            },
+            'd': {
+                w: 72,
+                paths: `<path d="M 50 14 L 64 14 L 64 110 L 50 110 L 50 101 C 44 107, 37 111, 29 111 C 13 111, 4 98, 4 80 C 4 62, 13 49, 29 49 C 37 49, 44 53, 50 59 Z M 33 62 C 23 62, 18 69, 18 80 C 18 91, 23 98, 33 98 C 43 98, 50 91, 50 80 C 50 69, 43 62, 33 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 46, cy: 64, c: GREEN },
+                    { cx: 57, cy: 22, c: ORANGE },
+                    { cx: 57, cy: 103, c: RED }
+                ]
+            },
+            'e': {
+                w: 68,
+                paths: `<path d="M 63 85 L 19 85 C 21 94, 27 99, 36 99 C 43 99, 48 96, 51 91 L 62 97 C 57 106, 48 111, 35 111 C 16 111, 5 98, 5 80 C 5 62, 16 49, 35 49 C 53 49, 64 61, 64 79 C 64 81, 63 83, 63 85 Z M 19 74 L 50 74 C 49 66, 43 61, 35 61 C 26 61, 21 66, 19 74 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 14, cy: 79.5, c: GREEN },
+                    { cx: 57, cy: 79.5, c: ORANGE },
+                    { cx: 55, cy: 96, c: RED }
+                ]
+            },
+            'f': {
+                w: 48,
+                paths: `<path d="M 44 15 L 44 28 C 41 27, 38 27, 36 27 C 31 27, 29 30, 29 36 L 29 50 L 42 50 L 42 62 L 29 62 L 29 110 L 15 110 L 15 62 L 5 62 L 5 50 L 15 50 L 15 35 C 15 21, 22 14, 36 14 C 39 14, 42 14, 44 15 Z"/>`,
+                dots: [
+                    { cx: 38, cy: 21, c: GREEN },
+                    { cx: 22, cy: 103, c: RED },
+                    { cx: 11, cy: 56, c: GREEN },
+                    { cx: 36, cy: 56, c: RED }
+                ]
+            },
+            'g': {
+                w: 72,
+                paths: `<path d="M 52 50 L 66 50 L 66 107 C 66 127, 54 137, 34 137 C 20 137, 10 131, 7 120 L 21 116 C 23 122, 28 125, 35 125 C 46 125, 52 119, 52 107 L 52 99 C 46 105, 39 109, 31 109 C 15 109, 6 97, 6 79 C 6 61, 15 49, 31 49 C 39 49, 46 53, 52 59 Z M 35 62 C 25 62, 20 69, 20 79 C 20 90, 25 97, 35 97 C 45 97, 52 90, 52 79 C 52 69, 45 62, 35 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 47, cy: 63, c: GREEN },
+                    { cx: 59, cy: 57, c: ORANGE },
+                    { cx: 15, cy: 120, c: RED }
+                ]
+            },
+            'h': {
+                w: 68,
+                paths: `<path d="M 8 14 L 22 14 L 22 59 C 27 52, 34 49, 42 49 C 55 49, 62 57, 62 72 L 62 110 L 48 110 L 48 75 C 48 66, 44 62, 36 62 C 28 62, 22 67, 22 77 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 22, c: GREEN },
+                    { cx: 15, cy: 103, c: ORANGE },
+                    { cx: 55, cy: 103, c: RED }
+                ]
+            },
+            'i': {
+                w: 30,
+                paths: `<path d="M 8 24 L 22 24 L 22 38 L 8 38 Z M 8 50 L 22 50 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 57, c: GREEN },
+                    { cx: 15, cy: 103, c: RED },
+                    { cx: 17, cy: 31, c: RED },
+                    { cx: 13, cy: 31, c: GREEN }
+                ]
+            },
+            'j': {
+                w: 38,
+                paths: `<path d="M 16 24 L 30 24 L 30 38 L 16 38 Z M 16 50 L 30 50 L 30 112 C 30 129, 22 137, 8 137 C 5 137, 3 137, 1 136 L 3 123 C 5 124, 6 124, 8 124 C 14 124, 16 120, 16 112 Z"/>`,
+                dots: [
+                    { cx: 23, cy: 57, c: GREEN },
+                    { cx: 7, cy: 130, c: RED },
+                    { cx: 25, cy: 31, c: RED },
+                    { cx: 21, cy: 31, c: GREEN }
+                ]
+            },
+            'k': {
+                w: 64,
+                paths: `<path d="M 8 14 L 22 14 L 22 74 L 44 50 L 61 50 L 37 76 L 62 110 L 45 110 L 27 85 L 22 90 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 22, c: GREEN },
+                    { cx: 15, cy: 103, c: RED },
+                    { cx: 51, cy: 55, c: GREEN },
+                    { cx: 51, cy: 103, c: RED }
+                ]
+            },
+            'l': {
+                w: 30,
+                paths: `<path d="M 8 14 L 22 14 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 22, c: GREEN },
+                    { cx: 15, cy: 103, c: RED }
+                ]
+            },
+            'm': {
+                w: 98,
+                paths: `<path d="M 8 50 L 21 50 L 21 58 C 26 52, 32 49, 40 49 C 48 49, 54 53, 57 60 C 62 53, 69 49, 77 49 C 89 49, 95 57, 95 71 L 95 110 L 81 110 L 81 74 C 81 66, 78 62, 72 62 C 65 62, 60 67, 60 76 L 60 110 L 46 110 L 46 74 C 46 66, 43 62, 36 62 C 29 62, 22 67, 22 76 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 14.5, cy: 57, c: GREEN },
+                    { cx: 14.5, cy: 103, c: ORANGE },
+                    { cx: 53, cy: 103, c: ORANGE },
+                    { cx: 88, cy: 103, c: RED }
+                ]
+            },
+            'n': {
+                w: 68,
+                paths: `<path d="M 8 50 L 21 50 L 21 59 C 26 52, 33 49, 42 49 C 55 49, 62 57, 62 72 L 62 110 L 48 110 L 48 75 C 48 66, 44 62, 36 62 C 28 62, 22 67, 22 77 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 14.5, cy: 57, c: GREEN },
+                    { cx: 14.5, cy: 103, c: ORANGE },
+                    { cx: 55, cy: 103, c: RED }
+                ]
+            },
+            'o': {
+                w: 70,
+                paths: `<path d="M 35 49 C 54 49, 65 62, 65 80 C 65 98, 54 111, 35 111 C 16 111, 5 98, 5 80 C 5 62, 16 49, 35 49 Z M 35 62 C 24 62, 19 69, 19 80 C 19 91, 24 98, 35 98 C 46 98, 51 91, 51 80 C 51 69, 46 62, 35 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 38, cy: 55.5, c: RED },
+                    { cx: 32, cy: 55.5, c: GREEN }
+                ]
+            },
+            'p': {
+                w: 72,
+                paths: `<path d="M 8 50 L 22 50 L 22 59 C 28 53, 35 49, 43 49 C 59 49, 68 62, 68 80 C 68 98, 59 111, 43 111 C 35 111, 28 107, 22 101 L 22 136 L 8 136 Z M 39 62 C 29 62, 22 69, 22 80 C 22 91, 29 98, 39 98 C 49 98, 54 91, 54 80 C 54 69, 49 62, 39 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 15, cy: 57, c: GREEN },
+                    { cx: 15, cy: 129, c: ORANGE },
+                    { cx: 26, cy: 96, c: RED }
+                ]
+            },
+            'q': {
+                w: 72,
+                paths: `<path d="M 50 50 L 64 50 L 64 136 L 50 136 L 50 101 C 44 107, 37 111, 29 111 C 13 111, 4 98, 4 80 C 4 62, 13 49, 29 49 C 37 49, 44 53, 50 59 Z M 33 62 C 23 62, 18 69, 18 80 C 18 91, 23 98, 33 98 C 43 98, 50 91, 50 80 C 50 69, 43 62, 33 62 Z" fill-rule="evenodd"/>`,
+                dots: [
+                    { cx: 46, cy: 64, c: GREEN },
+                    { cx: 57, cy: 57, c: ORANGE },
+                    { cx: 57, cy: 129, c: RED }
+                ]
+            },
+            'r': {
+                w: 46,
+                paths: `<path d="M 8 50 L 21 50 L 21 60 C 25 52, 31 49, 39 49 C 41 49, 43 49, 44 50 L 42 63 C 40 62, 38 62, 36 62 C 27 62, 22 68, 22 79 L 22 110 L 8 110 Z"/>`,
+                dots: [
+                    { cx: 14.5, cy: 57, c: GREEN },
+                    { cx: 14.5, cy: 103, c: ORANGE },
+                    { cx: 37, cy: 56, c: RED }
+                ]
+            },
+            's': {
+                w: 58,
+                paths: `<path d="M 52 65 L 40 68 C 38 63, 34 60, 29 60 C 23 60, 20 63, 20 67 C 20 71, 24 73, 33 75 C 47 78, 54 83, 54 93 C 54 104, 44 111, 29 111 C 15 111, 6 105, 4 94 L 17 91 C 19 97, 23 100, 30 100 C 36 100, 40 97, 40 93 C 40 89, 36 87, 27 85 C 14 82, 7 77, 7 67 C 7 56, 16 49, 29 49 C 42 49, 50 55, 52 65 Z"/>`,
+                dots: [
+                    { cx: 44, cy: 63, c: GREEN },
+                    { cx: 13, cy: 94, c: RED }
+                ]
+            },
+            't': {
+                w: 46,
+                paths: `<path d="M 15 26 L 29 26 L 29 50 L 42 50 L 42 62 L 29 62 L 29 91 C 29 96, 31 98, 36 98 C 38 98, 40 98, 42 97 L 42 110 C 39 111, 36 111, 33 111 C 20 111, 15 104, 15 91 L 15 62 L 5 62 L 5 50 L 15 50 Z"/>`,
+                dots: [
+                    { cx: 22, cy: 33, c: GREEN },
+                    { cx: 36, cy: 103, c: RED },
+                    { cx: 11, cy: 56, c: GREEN },
+                    { cx: 36, cy: 56, c: RED }
+                ]
+            },
+            'u': {
+                w: 68,
+                paths: `<path d="M 8 50 L 22 50 L 22 85 C 22 94, 26 98, 34 98 C 42 98, 48 93, 48 83 L 48 50 L 62 50 L 62 110 L 49 110 L 49 101 C 44 108, 37 111, 28 111 C 15 111, 8 103, 8 88 Z"/>`,
+                dots: [
+                    { cx: 15, cy: 57, c: GREEN },
+                    { cx: 55, cy: 57, c: ORANGE },
+                    { cx: 55, cy: 103, c: RED }
+                ]
+            },
+            'v': {
+                w: 64,
+                paths: `<path d="M 4 50 L 19 50 L 32 93 L 45 50 L 60 50 L 39 110 L 25 110 Z"/>`,
+                dots: [
+                    { cx: 12, cy: 57, c: GREEN },
+                    { cx: 52, cy: 57, c: RED }
+                ]
+            },
+            'w': {
+                w: 88,
+                paths: `<path d="M 4 50 L 18 50 L 27 91 L 38 50 L 50 50 L 61 91 L 70 50 L 84 50 L 68 110 L 55 110 L 44 71 L 33 110 L 20 110 Z"/>`,
+                dots: [
+                    { cx: 11.5, cy: 57, c: GREEN },
+                    { cx: 76.5, cy: 57, c: RED }
+                ]
+            },
+            'x': {
+                w: 62,
+                paths: `<path d="M 5 50 L 21 50 L 31 69 L 41 50 L 57 50 L 39 79 L 58 110 L 42 110 L 31 90 L 20 110 L 4 110 L 23 79 Z"/>`,
+                dots: [
+                    { cx: 14, cy: 56, c: GREEN },
+                    { cx: 48, cy: 104, c: RED },
+                    { cx: 48, cy: 56, c: GREEN },
+                    { cx: 14, cy: 104, c: RED }
+                ]
+            },
+            'y': {
+                w: 64,
+                paths: `<path d="M 4 50 L 19 50 L 32 91 L 45 50 L 60 50 L 36 118 C 31 132, 23 137, 11 137 C 8 137, 6 137, 4 136 L 6 124 C 8 124, 9 124, 11 124 C 17 124, 20 121, 23 113 L 24 109 Z"/>`,
+                dots: [
+                    { cx: 12, cy: 57, c: GREEN },
+                    { cx: 30, cy: 87, c: RED },
+                    { cx: 52, cy: 57, c: GREEN },
+                    { cx: 11, cy: 130, c: RED }
+                ]
+            },
+            'z': {
+                w: 58,
+                paths: `<path d="M 6 50 L 53 50 L 53 61 L 23 98 L 54 98 L 54 110 L 5 110 L 5 99 L 35 62 L 6 62 Z"/>`,
+                dots: [
+                    { cx: 12, cy: 56, c: GREEN },
+                    { cx: 48, cy: 104, c: RED }
+                ]
+            }
+        };
+
+        // Ondersteuning voor veelvoorkomende leestekens
+        const PUNCTUATION = {
+            '.': { w: 24, paths: `<circle cx="12" cy="103" r="6"/>`, dots: [] },
+            ',': { w: 24, paths: `<path d="M 10 97 L 18 97 L 13 116 L 6 116 Z"/>`, dots: [] },
+            '!': { w: 26, paths: `<path d="M 8 20 L 18 20 L 17 85 L 9 85 Z"/><circle cx="13" cy="103" r="6"/>`, dots: [] },
+            '?': { w: 54, paths: `<path d="M 8 38 C 10 23, 19 16, 31 16 C 43 16, 51 24, 51 36 C 51 46, 45 52, 37 58 C 32 62, 31 66, 31 74 L 21 74 C 21 63, 23 57, 30 51 C 36 46, 39 42, 39 36 C 39 30, 35 27, 30 27 C 24 27, 20 31, 19 39 Z"/><circle cx="26" cy="103" r="6"/>`, dots: [] },
+            '-': { w: 40, paths: `<rect x="6" y="74" width="28" height="10" rx="2"/>`, dots: [] }
+        };
+
+        // Elementen ophalen
+        const titleInput = document.getElementById('titleInput');
+        const textInput = document.getElementById('textInput');
+        const sizeRange = document.getElementById('sizeRange');
+        const sizeValue = document.getElementById('sizeValue');
+        const showName = document.getElementById('showName');
+        const showDots = document.getElementById('showDots');
+
+        const displayTitle = document.getElementById('displayTitle');
+        const displayNameField = document.getElementById('displayNameField');
+        const sheetHeader = document.getElementById('sheetHeader');
+        const worksheetContent = document.getElementById('worksheetContent');
+
+        function createCharSVG(char, includeDots) {
+            const lower = char.toLowerCase();
+            const glyph = GLYPHS[lower] || PUNCTUATION[char];
+
+            if (!glyph) return null;
+
+            const dotsHTML = includeDots
+                ? glyph.dots.map(d => `<circle cx="${d.cx}" cy="${d.cy}" r="5.2" fill="${d.c}"/>`).join('')
+                : '';
+
+            return `
+                <svg viewBox="0 0 ${glyph.w} 140" xmlns="http://www.w3.org/2000/svg">
+                    <g fill="#ffffff" stroke="#000000" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+                        ${glyph.paths}
+                    </g>
+                    ${dotsHTML}
+                </svg>
+            `;
+        }
+
+        function renderWorksheet() {
+            // Koptekst & opties bijwerken
+            const titleText = titleInput.value.trim();
+            displayTitle.textContent = titleText;
+            displayNameField.style.display = showName.checked ? 'block' : 'none';
+            sheetHeader.style.display = (titleText || showName.checked) ? 'flex' : 'none';
+
+            // Lettergrootte bijwerken
+            const size = sizeRange.value;
+            sizeValue.textContent = `${size} px`;
+            worksheetContent.style.setProperty('--char-height', `${size}px`);
+
+            // Tekst omzetten naar regels en stoplichttekens
+            const lines = textInput.value.split('\n');
+            const includeDots = showDots.checked;
+            worksheetContent.innerHTML = '';
+
+            lines.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'word-line';
+
+                for (const char of line) {
+                    if (char === ' ') {
+                        const space = document.createElement('div');
+                        space.className = 'space-box';
+                        lineDiv.appendChild(space);
+                    } else {
+                        const svgMarkup = createCharSVG(char, includeDots);
+                        if (svgMarkup) {
+                            const box = document.createElement('div');
+                            box.className = 'char-box';
+                            box.innerHTML = svgMarkup;
+                            lineDiv.appendChild(box);
+                        }
+                    }
+                }
+                worksheetContent.appendChild(lineDiv);
+            });
+        }
+
+        // Event listeners
+        titleInput.addEventListener('input', renderWorksheet);
+        textInput.addEventListener('input', renderWorksheet);
+        sizeRange.addEventListener('input', renderWorksheet);
+        showName.addEventListener('change', renderWorksheet);
+        showDots.addEventListener('change', renderWorksheet);
+
+        // Initiële weergave
+        renderWorksheet();
+    </script>
+</body>
+</html>
